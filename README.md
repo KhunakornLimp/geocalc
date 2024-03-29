@@ -1,0 +1,2 @@
+# geocalc
+Calculator for geosciences
