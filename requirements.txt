@@ -1,0 +1,10 @@
+click @ file:///C:/ci/click_1646038595831/work
+Flask @ file:///home/ktietz/src/ci/flask_1611932660458/work
+Flask-WTF==1.2.1
+gunicorn==21.2.0
+itsdangerous @ file:///tmp/build/80754af9/itsdangerous_1621432558163/work
+Jinja2 @ file:///tmp/build/80754af9/jinja2_1612213139570/work
+jinja2-time @ file:///opt/conda/conda-bld/jinja2-time_1649251842261/work
+MarkupSafe @ file:///C:/ci/markupsafe_1621528502553/work
+Werkzeug @ file:///opt/conda/conda-bld/werkzeug_1645628268370/work
+WTForms==3.1.2
