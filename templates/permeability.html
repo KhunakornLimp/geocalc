@@ -1,0 +1,225 @@
+{% extends "layout.html" %}
+
+{% block title %}Calculating permeability{% endblock %}
+
+{% block content %}
+
+<style>
+    /* Custom styles for permeability.html */
+
+    /* Default styles for screens less than or equal to 1000px */
+    .form-container {
+        max-width: 500px;
+        margin: auto;
+    }
+
+    .form-group {
+        margin-bottom: 10px;
+    }
+
+    .form-label {
+        font-weight: bold;
+    }
+
+    .form-control {
+        width: 100%;
+    }
+
+    .submit-button {
+        width: 100%;
+    }
+
+    .result-container {
+        max-width: 500px;
+        margin: auto;
+    }
+
+    /* Media query for screens wider than 1000px */
+    @media screen and (min-width: 1001px) {
+        .form-container {
+            max-width: 1000px;
+        }
+
+        .form-group {
+            display: flex;
+            align-items: center;
+        }
+
+        .form-label {
+            flex: 1;
+            margin-right: 10px;
+        }
+
+        .form-control {
+            flex: 2;
+        }
+
+        .result-container {
+            max-width: 1000px;
+            margin: auto;
+        }
+    }
+</style>
+
+<div class="container">
+    <h1 class="text-center my-2">Permeability Calculator</h1>
+    <p>The permeability of a cylindrical core sample can be calculated here.</p>
+
+    <br />
+
+    <div class="form-container">
+        <form method="POST" action="" class="form">
+            {{ form.hidden_tag() }}
+            
+            <div class="form-group">
+                <label for="radius" class="form-label">Core cross-sectional radius (\(\text{cm}\))</label>
+                {{ form.radius(class="form-control") }}
+            </div>
+
+            <div class="form-group">
+                <label for="length" class="form-label">Core length (\(\text{cm}\))</label>
+                {{ form.length(class="form-control") }}
+            </div>
+
+            <div class="form-group">
+                <label for="angle" class="form-label">Core inclination (degrees) (positive is downhill, negative is uphill)</label>
+                {{ form.angle(class="form-control") }}
+            </div>
+
+            <div class="form-group">
+                <label for="flowrate" class="form-label">Fluid flow rate (\(\text{cm}^3/\text{s}\))</label>
+                {{ form.flowrate(class="form-control") }}
+            </div>
+
+            <div class="form-group">
+                <label for="density" class="form-label">Fluid density (\(\text{kg}/\text{m}^3\))</label>
+                {{ form.density(class="form-control") }}
+            </div>
+
+            <div class="form-group">
+                <label for="viscosity" class="form-label">Fluid viscosity (\(\text{Pa.s}\))</label>
+                {{ form.viscosity(class="form-control") }}
+            </div>
+
+            <div class="form-group">
+                <label for="inlet_pressure" class="form-label">Inlet pressure (\(\text{Pa}\))</label>
+                {{ form.inlet_pressure(class="form-control") }}
+            </div>
+
+            <div class="form-group">
+                <label for="outlet_pressure" class="form-label">Outlet pressure (\(\text{Pa}\))</label>
+                {{ form.outlet_pressure(class="form-control") }}
+            </div>
+
+            <button type="submit" class="btn btn-success submit-button">Calculate</button>
+        </form>
+    </div>
+
+    <br />
+
+    {% if permeability %}
+    <div class="result-container my-20">
+        <h3>Permeability: {{ permeability }} D</h3>
+        <br />
+    </div>
+    {% endif %}
+
+    <br />
+
+    Example:
+    <br />
+    An experiment is performed on a core inclined by 30 degrees from the horizontal. 
+    The cross-sectional area is 10 \(\text{cm}^2\). 
+    Water flows through the core in the downhill direction at a rate of 20 \(\text{cm}^3\) per minute.
+    The inlet and outlet pressures are 1.1 and 1 atmosphere, respectively.
+    The rock porosity is 0.25.
+    The core has a length of 20 \(\text{cm}\). 
+    The water density is 1,000 \(\text{kg}.\text{m}^{-3}\)
+    The water viscosity is 10<sup>-3</sup> \(\text{Pa.s}\). 
+    You may assume that atmospheric pressure is 101 \(\text{kPa}\).
+    What is the permeability of the rock? 
+    What speed is water moving through the rock? 
+    How long would it take for the injected water to be produced? 
+    <br />
+    <br />
+    The diagram below shows the experiment conducted to measure the permeability of the rock.
+    <br />
+    <img class="mx-auto d-block" src="../static/permeability_example.png" alt="Permeability example" width="500px" />
+    <br />
+    Recall the 1D Darcy's law (in the x-direction):
+    \[
+    \begin{align}
+    q &= -\frac{K}{\mu} \left( \frac{\partial P}{\partial x} - \rho g_x \right) \\
+    &= -\frac{K}{\mu} \left( \frac{P_{out} - P_{in}}{L} - \rho g_x \right) \\
+    &= \frac{K}{\mu} \left( \frac{P_{in} - P_{out}}{L} + \rho g_x \right)
+    \end{align}
+    \]
+    &emsp; where
+    <ul type="none">
+        <li>\( q \) = Darcy velocity of the fluid (\(\text{m}/\text{s}\)) </li>
+        <li>\( K \) = Permeability of the core (\(\text{m}^2\)) </li>
+        <li>\( \mu \) = Fluid viscosity (\(\text{Pa.s}\)) </li>
+        <li>\( \frac{\partial P}{\partial x} \) = Pressure gradient in the x-direction (\(\text{Pa/m}\)) = Difference between the outlet (\( P_{out} \)) and inlet (\( P_{in} \)) pressures over a length \(L\) in the x-direction </li>
+        <li>\( \rho \) = Fluid density (\(\text{kg}/\text{m}^3\)) </li>
+        <li>\( g_x \) = Gravitational acceleration in the x-direction (\(\text{m}/\text{s}^2\)) </li>
+    </ul>
+    Given that water flows through the rock with a rate (\(Q\)) of 20 \(\text{cm}^3/\text{min}\) across a 10 \(\text{cm}^2\) cross-sectional area (\(A\)).
+    <br />
+    Finding \(Q\):
+    \[
+    \begin{align}
+    q &= \frac{Q}{A} \\
+    &= \frac{20 \;\text{cm}^3}{1 \;\text{min}} \times \frac{1}{10 \;\text{cm}^2} \\
+    &= \frac{20 \;\text{cm}^3}{1 \;\text{min}} \times \frac{1}{10 \;\text{cm}^2} \times \frac{1 \;\text{m}}{100 \;\text{cm}} \times \frac{1 \;\text{min}}{60 \;\text{s}} \\
+    &= 3.33 \times 10^{-4} \;\text{m}/\text{s} \\
+    \end{align}
+    \]
+
+    Given that:
+    \[
+    \begin{align}
+    \mu &= 10^{-3} \;\text{Pa.s} \\
+    P_{in} &= 1.1 \;\text{atm} = 1.111 \times 10^5 \;\text{Pa} \\
+    P_{out} &= 1 \;\text{atm} = 1.01 \times 10^5 \;\text{Pa} \\
+    L &= 20 \;\text{cm} = 0.2 \;\text{m} \\
+    \rho &= 1000 \;\text{kg}/\text{m}^3 \\
+    g_x &= g \sin 30^\circ = 4.9 \;\text{m}/\text{s}^2
+    \end{align}
+    \]
+
+    Finding \(K\):
+    \[
+    \begin{align}
+    3.33 \times 10^{-4} &= \frac{K}{10^{-3}} \left( \frac{(1.111 - 1.01) \times 10^5}{0.2} + 1000 \times 4.9 \right) \\
+    K &= 6.0 \times 10^{-12} \;\text{m}^2 \\
+    &= 6.0 \;\text{D}
+    \end{align}
+    \]
+
+    Finding the interstitial velocity of the fluid (\(v\)):
+    \[v = \frac{q}{\phi}\]
+    &emsp; where \(\phi\) is the porosity of the core.
+    <br />
+    Since \(q = 3.33 \times 10^{-4} \;\text{m/s}\), and given that \(\phi = 0.25\), so:
+    \[
+    \begin{align}
+    v &= \frac{3.33 \times 10^{-4}}{0.25} \\
+    &= 1.3 \times 10^{-3} \;\text{m/s}
+    \end{align}
+    \]
+
+    The length of the core is 0.2 \(\text{m}\), so the time taken by water to go through the core is:
+    \[
+    \begin{align}
+    t &= \frac{L}{v} \\
+    &= \frac{0.2}{1.3 \times 10^{-3}} \\
+    &= 154 \;\text{s} \\
+    &\approx 2.6 \;\text{min}
+    \end{align}
+    \]
+
+    So, the permeability of the core is 6.0 \(\text{D}\). The water is moving through the core at a speed of \( 1.3 \times 10^{-3} \;\text{m/s} \), taking around 2.6 minutes.
+    <hr />
+</div>
+
+{% endblock %}
