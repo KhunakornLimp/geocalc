@@ -1,0 +1,60 @@
+/* Default styles for screens less than or equal to 1000px */
+.form-container {
+    max-width: 500px;
+    margin: auto;
+}
+
+.form-group {
+    margin-bottom: 10px;
+}
+
+.form-label {
+    font-weight: bold;
+}
+
+.form-control {
+    width: 100%;
+}
+
+.submit-button {
+    width: 100%;
+}
+
+.result-container {
+    max-width: 500px;
+    margin: auto;
+}
+
+.img-content {
+    width: 80%;
+}
+
+/* Media query for screens wider than 1000px */
+@media screen and (min-width: 1001px) {
+    .form-container {
+        max-width: 1000px;
+    }
+
+    .form-group {
+        display: flex;
+        align-items: center;
+    }
+
+    .form-label {
+        flex: 1;
+        margin-right: 10px;
+    }
+
+    .form-control {
+        flex: 2;
+    }
+
+    .result-container {
+        max-width: 1000px;
+        margin: auto;
+    }
+
+    .img-content {
+        width: 50%;
+    }
+}

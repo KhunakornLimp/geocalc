@@ -3,20 +3,89 @@
 {% block title %}Welcome to GEOCALC!{% endblock %}
 
 {% block content %}
+    <style>
+        /* Style for About section */
+        .about-container {
+            max-width: 800px;
+            margin: auto;
+            padding: 20px;
+            border: 1px solid #ccc;
+            border-radius: 10px;
+            background-color: #f8f9fa;
+            box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+        }
+
+        .about-header {
+            font-size: 24px;
+            font-weight: bold;
+            margin-bottom: 10px;
+        }
+
+        .about-text {
+            font-size: 16px;
+            line-height: 1.6;
+            margin-bottom: 20px;
+        }
+
+        .about-link {
+            color: #238B5B;
+            font-weight: bold;
+            text-decoration: none;
+        }
+
+        .about-link:hover {
+            text-decoration: underline;
+        }
+    </style>
+
     <h1 class="text-center my-2">GEOCALC</h1>
     <h4 class="text-center">Calculator for geoscientists</h4>
     <br />
     <div class="container">
         <div class="row">
             <div class="col-lg-4 col-md-6 mb-4">
-                <div class="card h-60">
+                <div class="card h-100">
                     <div class="card-body">
                         <a href="/permeability" class="text-success"><h3 class="card-title">Permeability Calculator</h3></a>
                         <p class="card-text">Calculate the permeability of a cylindrical core sample.</p>
                     </div>
                 </div>
             </div>
+            <div class="col-lg-4 col-md-6 mb-4">
+                <div class="card h-100">
+                    <div class="card-body">
+                        <a href="/flow-under-gravity" class="text-success"><h3 class="card-title">Flow Under Gravity</h3></a>
+                        <p class="card-text">Calculate the hydraulic conductivity for a fluid from a single-phase flow under gravity in a porous medium or the relative permeability for a fluid from a two-phase flow under gravity in a porous medium.</p>
+                    </div>
+                </div>
+            </div>
+            <div class="col-lg-4 col-md-6 mb-4">
+                <div class="card h-100">
+                    <div class="card-body">
+                        <a href="/leverett" class="text-success"><h3 class="card-title">Leverett J-function</h3></a>
+                        <p class="card-text">Leverett J-function.</p>
+                    </div>
+                </div>
+            </div>
             <!-- Add more calculator cards here following the same structure -->
         </div>
+    </div>
+
+    <hr />
+
+    <div class="container my-5 about-container">
+        <h2 class="about-header">About GEOCALC</h2>
+        <p class="about-text">
+            GEOCALC is a web application that provides calculators for geoscientists. The application is built using the Flask web framework and the Bootstrap CSS framework.
+        </p>
+        <p class="about-text">
+            The application is open-source and the source code is available on GitHub. The calculators are designed to be easy to use and provide accurate results. The application is constantly being updated and new calculators are being added regularly.
+        </p>
+        <p class="about-text">
+            If you have any questions or feedback, please feel free to contact us. We are always looking for ways to improve the application and make it more useful for geoscientists.
+        </p>
+        <p class="about-text">
+            For more information about the developer, please visit <a class="about-link" href="https://www.Khunakorn-limp.com">Khunakorn Limpsapapapkasiphol</a>.
+        </p>
     </div>
 {% endblock %}

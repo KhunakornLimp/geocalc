@@ -1,0 +1,159 @@
+{% extends "layout.html" %}
+
+{% block title %}Flow Under Gravity{% endblock %}
+
+{% block content %}
+
+<link rel="stylesheet" type="text/css" href="../static/styles.css">
+
+<div class="container">
+    <h1 class="text-center my-2">Flow Under Gravity</h1>
+    <p>
+        Calculate the hydraulic conductivity of a fluid from a single-phase flow under gravity in a porous medium or 
+        the Darcy velocity of a fluid from a two-phase flow under gravity in a porous medium.
+    </p>
+
+    <br />
+
+    <div class="form-container">
+        <form method="POST" action="" class="form">
+            {{ form.hidden_tag() }}
+            
+            <div class="form-group">
+                <label for="permeability" class="form-label">Permeability (\(\text{D}\))</label>
+                {{ form.permeability(class="form-control") }}
+            </div>
+
+            <div class="form-group">
+                <label for="density1" class="form-label">Density of the fluid of interest (\(\text{kg}/\text{m}^3\))</label>
+                {{ form.density1(class="form-control") }}
+            </div>
+
+            <div class="form-group">
+                <label for="density2" class="form-label">Density of the other fluid (leave it 0 for 1-phase flow) (\(\text{kg}/\text{m}^3\))</label>
+                {{ form.density2(class="form-control") }}
+            </div>
+
+            <div class="form-group">
+                <label for="viscosity1" class="form-label">Viscosity of the fluid of interest (\(\text{Pa.s}\))</label>
+                {{ form.viscosity1(class="form-control") }}
+            </div>
+
+            <button type="submit" class="btn btn-success submit-button">Calculate</button>
+        </form>
+    </div>
+
+    <br />
+
+    {% if darcy_velocity %}
+        <div class="result-container my-20">
+            {% if form.density2.data == 0 %}
+                <h3>The fluid of interest flows downwards with a hydraulic conductivity of {{ '%.1e'|format(darcy_velocity) }} \(\text{m/s}\)</h3>
+            {% else %}
+                {% if form.density1.data >= form.density2.data %}
+                    <h3>The fluid of interest flows downwards with a Darcy velocity of {{ '%.1e'|format(darcy_velocity) }} \(\text{m/s}\)</h3>
+                {% else %}
+                    <h3>The fluid of interest flows upwards with a Darcy velocity of {{ '%.1e'|format(darcy_velocity) }} \(\text{m/s}\)</h3>
+                {% endif %}
+            {% endif %}
+        </div>
+    {% endif %}
+
+    <br />
+
+    <h3>Background</h3>
+
+    Flow under gravity in a porous medium is the flow that is driven by gravity only, not also a pressure gradient.
+    <br />
+    Recall 1D Darcy's law for a single-phase flow,
+    \[ q = -\frac{K}{\mu} \left( \frac{\partial P}{\partial x} - \rho g \right) \]
+    No pressure gradient is applied, so the equation simplifies to
+    \[ q = \frac{K \rho g}{\mu} \]
+    This Darcy velocity is known as the hydraulic conductivity, the velocity of a fluid through a porous medium under gravity:
+    \[ K_H = \frac{K \rho g}{\mu} \]
+    
+    Before introducing the Darcy velocity for a two-phase flow, let's introduce the multi-phase Darcy's law:
+    \[ \boldsymbol{q}_p = -\frac{K_{r,p}K}{\mu_p} \left( \nabla P_p - \rho_p \boldsymbol{g} \right) \]
+    <ul type="none">
+        <li>\(\boldsymbol{q}_p\) = Darcy velocity of the fluid phase \( \text{p} \) (\( \text{m/s} \))</li>
+        <li>\(K_{r,p}\) = Relative permeability for the fluid phase \( \text{p} \) (dimensionless)</li>
+        <li>\(K\) = Permeability of the medium (\( \text{m}^2 \))</li>
+        <li>\(\mu_p\) = Viscosity of the fluid phase \( \text{p} \) (\( \text{Pa.s} \))</li>
+        <li>\(\nabla P_p\) = Pressure gradient of the fluid phase \( \text{p} \) across the medium (\( \text{Pa/m} \))</li>
+        <li>\(\rho_p\) = Density of the fluid phase \( \text{p} \) (\( \text{kg}/\text{m}^3 \))</li>
+        <li>\(\boldsymbol{g}\) = Gravitational acceleration (\( \text{m}/\text{s}^2 \))</li>
+    </ul>
+
+    The multi-phase Darcy's law assumes a slow steady-state flow dominated by capillary force, no turbulence, and no time-dependent term.
+    It also assumes that each phase flows in its own sub-network of the pore space without affecting and being affected by the flow of the other phases through viscous coupling at the fluid interfaces.
+    This is applicable for flow in porous media.
+    <br />
+    Relative permeability is the fraction by which flow is reduced due to the presence of other phases in the porous medium.
+    This definition is based on the assumption that it is not a function of fluid viscosity, interfacial tension, and flow rate.
+    The value is between 0 and 1, where 0 means no flow and 1 means full (single-phase) flow.
+    <br /><br />
+    In a two-phase flow with phases \( \text{p1} \) and \( \text{p2} \), and the pressure of the latter phase varies by depth (\( z \)), the Darcy velocity of the fluid phase \( \text{p1} \) is:
+    \[ q_{p1} = -\frac{k_{r,p1}K}{\mu_{p1}} \left( \frac{\partial P_{p1}}{\partial z} - \rho_{p1} g \right) \]
+    The pressure of \( \text{p2} \) at a reference level is denoted by \( P_0 \). At a depth \( z \),
+    \[ P_{p2} = P_0 + \rho_{p1}gz \]
+    By the definition of capillary pressure, \( P_c = P_{p1} - P_{p2} \), so
+    \[ P_{p1} = P_c + P_0 + \rho_{p2}gz \]
+    Assume that \( P_c \) is constant and thus \( P_c \) that starts the displacement is \( P_c^{entry} \approx P_c \), and \( k_{r,p1} \approx 1 \), so 
+    \[
+    \begin{align}
+    q_{p1} &= -\frac{K}{\mu_{p1}} \left( \frac{\partial}{\partial z} \left( P_c + P_0 + \rho_{p2}gz \right)  - \rho_{p1} g \right) \\
+    &= -\frac{K}{\mu_{p1}} \Delta\rho g
+    \end{align}
+    \]
+    &emsp; where \( \Delta\rho = \rho_{p2} - \rho_{p1} \).
+    <br />
+    From the equation, it can be said that flow under gravity is driven by the density difference between two fluid phases.
+    The negative sign indicates that \( \text{p1} \) flows upwards if \( \rho_{p2} \geq \rho_{p1} \); otherwise flows downwards.
+    <br /><br />
+
+    <h3>Example</h3>
+
+    A piece of rock taken from a reservoir is used to measure the permeability, giving the value of 0.48 \(\text{D}\).
+    The reservoir will be used to store carbon dioxide in the subsurface. 
+    Under the influence of gravity, in which direction will carbon dioxide move in an aquifer initially saturated with water?
+    <br />
+    Estimate the Darcy velocity for flow under gravity if the viscosity of carbon dioxide is \( 4 \times 10^{-5} \;\text{Pa.s}\),
+    its density is 600 \(\text{kg/m}^3\), and the density of the water (brine) is 1050 \(\text{kg/m}^3\).
+    <br />
+    The rock has a porosity of 0.2. The storage aquifer has a height of 100 \(\text{m}\).
+    Estimate the time taken for the carbon dioxide to rise 100 \(\text{m}\).
+    Comment on your answer - what will prevent escape of the carbon dioxide? 
+    <br />
+    <br />
+    By common sense, the carbon dioxide would flow upward because its density is less than the density of the brine.
+    The flow direction of the carbon dioxide will be analysed mathematically.
+    <br />
+    The Darcy velocity of the carbon dioxide is given by
+    \[
+    \begin{align}
+    q_{CO_2} &= -\frac{K}{\mu_{CO_2}} (\rho_{b} - \rho_{CO_2}) g \\
+    &= -\frac{0.48 \times 10^{-12}}{4 \times 10^{-5}} (1050 - 600) \times 9.81 \\
+    &= -5.3 \times 10^{-5} \;\text{m/s}
+    \end{align}
+    \]
+
+    The negative sign indicates that the carbon dioxide flows upwards.
+    <br />
+    So, the carbon dioxide flows upwards with a Darcy velocity of \( 5.3 \times 10^{-5} \;\text{m/s} \).
+    <br /> 
+    Finding the interstitial velocity of the carbon dioxide,
+    \[ v = \frac{q}{\phi} = \frac{5.3 \times 10^{-5}}{0.2} = 2.7 \times 10^{-4} \;\text{m/s} \]
+
+    The time taken by the carbon dioxide to rise \(s = 100 \;\text{m}\) is
+    \[ t = \frac{s}{v} = \frac{100}{2.7 \times 10^{-4}} = 3.7 \times 10^{5} \;\text{s} \approx 4.3 \;\text{days} \]
+    The carbon dioxide would take only 4.3 days to reach the top of the reservoir (100 \(\text{m}\) high).
+    It flows quite fast and would escape to the atmosphere within a few years if there is no cap rock above the reservoir.
+    <br /> 
+    To mitigate climate change, the carbon dioxide must be stored safely underground for a long time (100s-1000s years).
+    An extensive rock layer with a very low permeability and a high entry capillary pressure (e.g., shale) above the reservoir would
+    prevent the escape of the carbon dioxide. It could also be capillary trapped or dissolve as it migrates, preventing the escape of the carbon dioxide.
+    <hr />
+
+</div>
+
+{% endblock %}

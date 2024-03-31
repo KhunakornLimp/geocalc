@@ -1,0 +1,158 @@
+{% extends "layout.html" %}
+
+{% block title %}Leverett J-function{% endblock %}
+
+{% block content %}
+
+<link rel="stylesheet" type="text/css" href="../static/styles.css">
+
+<div class="container">
+    <h1 class="text-center my-2">Leverett J-function</h1>
+    
+    The capillary pressure in the field can be calculated from the capillary pressure in the lab using the Leverett J-function.
+    <br /><br />
+
+    <div class="form-container">
+        <form method="POST" action="" class="form">
+            {{ form.hidden_tag() }}
+            
+            <div class="form-group">
+                <label for="interfacial_tension_L" class="form-label">Interfacial tension in the lab (\( \text{mN/m} \))</label>
+                {{ form.interfacial_tension_L(class="form-control") }}
+            </div>
+            <div class="form-group">
+                <label for="porosity_L" class="form-label">Porosity in the lab</label>
+                {{ form.porosity_L(class="form-control") }}
+            </div>
+            <div class="form-group">
+                <label for="permeability_L" class="form-label">Permeability in the lab (\(\text{D}\))</label>
+                {{ form.permeability_L(class="form-control") }}
+            </div>
+            <hr />
+            <div class="form-group">
+                <label for="interfacial_tension_F" class="form-label">Interfacial tension in the field (\( mN/m \))</label>
+                {{ form.interfacial_tension_F(class="form-control") }}
+            </div>
+            <div class="form-group">
+                <label for="porosity_F" class="form-label">Porosity in the field</label>
+                {{ form.porosity_F(class="form-control") }}
+            </div>
+            <div class="form-group">
+                <label for="permeability_F" class="form-label">Permeability in the field (\(\text{D}\))</label>
+                {{ form.permeability_F(class="form-control") }}
+            </div>
+            <hr />
+            <div class="form-group">
+                <label for="capillary_pressure_L_1" class="form-label">Capillary pressure in the lab 1 (Pa)</label>
+                <input type="number" step="any" name="capillary_pressure_L_1" id="capillary_pressure_L_1" class="form-control" required>
+            </div>
+            <div class="form-group">
+                <label for="saturation_1" class="form-label">Saturation 1</label>
+                <input type="number" step="any" min="0" max="1" name="saturation_1" id="saturation_1" class="form-control" required>
+            </div>
+
+            <div id="additional-inputs"></div>
+            <button type="button" class="btn btn-info" id="add-more">Add more</button>
+            <hr />
+
+            <button type="submit" class="btn btn-success submit-button">Calculate</button>
+        </form>
+    </div>
+
+    <br />
+
+    {% if capillary_pressures_F %}
+        <div class="result-container my-20">
+            <h3>Capillary pressures of the rock at different saturation:</h3>
+            <table class="table">
+                <thead>
+                    <tr>
+                        <th>Saturation</th>
+                        <th>Capillary pressure in the lab (Pa)</th>
+                        <th>Capillary pressure in the field (Pa)</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    {% for i in range(saturations|length) %}
+                        <tr>
+                            <td>{{ saturations[i] }}</td>
+                            <td>{{ capillary_pressures_L[i] }}</td>
+                            <td>{{ '%.1e'|format(capillary_pressures_F[i]) }}</td>
+                        </tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+            <div class="text-center">
+                <img src="{{ url_for('static', filename='leverett.png') }}" alt="Leverett J-function" class="img-fluid">
+            </div>
+        </div>
+    {% endif %}
+
+    <br />
+
+    <h3>Background</h3>
+
+    The result of an experiment performed on a core sample in the lab may not accurately indicate the properties of the rock in the field because
+    <ul>
+        <li>The porosity and permeability of the sample may not represent those of the rock in the field.</li>
+        <li>The lab and the field have different conditions.</li>
+        <li>The injected and displaced phases in the sample in the lab (usually mercury and vacuum, respectively) are different from those in the field (usually oil and water, respectively).</li>
+    </ul>
+
+    The Leverett J-function is used to relate the capillary pressure in the lab to the capillary pressure in the field.
+    <br />
+    Since
+    \[ P_c \sim \frac{\sigma \cos{\theta}}{r} \]
+    and
+    \[ K \sim \phi r^2 \]
+    where
+    <ul type="none">
+        <li>\( P_c \) = Capillary pressure of the fluid in the medium (\( \text{Pa} \))</li>
+        <li>\( \sigma \) = Medium-fluid interfacial tension (\( \text{N/m} \))</li>
+        <li>\( \theta \) = Contact angle of the fluid on the solid surface</li>
+        <li>\( r \) = The radius of the smallest throat in a medium that a fluid must move through to flow through the medium (\( \text{m} \))</li>
+        <li>\( K \) = Permeability of the medium (\( \text{m}^2 \))</li>
+        <li>\( \phi \) = Porosity of the medium</li>
+    </ul>
+    So,
+    \[ P_c \sim \sigma \cos{\theta} \sqrt{\frac{\phi}{K}} \]
+    Since \( P_c \) is a function of wetting phase saturation \( S_w \), we can write
+    \[ P_c(S_w) = \sigma \cos{\theta} \sqrt{\frac{\phi}{K}} \cdot J(S_w) \]
+    \[ \therefore J(S_w) = \frac{P_c}{\sigma \cos{\theta}} \sqrt{\frac{K}{\phi}} \]
+    where \( J(S_w) \) is the Leverett J-function (dimensionless).
+    <br />
+    To approximate that \( J^{(L)} = J^{(F)} \) and \( \theta^{(L)} = \theta^{(F)} \), 
+    we have to assume that the sample in the lab (L) and the rock in the field (F) have the same pore structure and wettability.
+    This is applicable when the core has been aged at reservoir conditions.
+    <br />
+    So,
+    \[ J = \frac{P_c^{(L)}}{\sigma^{(L)} \cos{\theta^{(L)}}} \sqrt{\frac{K^{(L)}}{\phi^{(L)}}} = \frac{P_c^{(F)}}{\sigma^{(F)} \cos{\theta^{(F)}}} \sqrt{\frac{K^{(F)}}{\phi^{(F)}}} \]
+    \[ \therefore P_c^{(F)} = \frac{\sigma^{(F)}}{\sigma^{(L)}} \sqrt{ \frac{\phi^{(F)}}{\phi^{(L)}} \frac{K^{(L)}}{K^{(F)}} } \cdot P_c^{(L)} = AP_c^{(L)} \]
+    This means that \( P_c^{(F)} \) is calculated by scaling \( P_c^{(L)} \) by a factor \( A \).
+    <hr />
+</div>
+
+<script>
+    document.addEventListener("DOMContentLoaded", function() {
+        var addButton = document.getElementById('add-more');
+        var inputContainer = document.getElementById('additional-inputs');
+        var index = 1;
+
+        addButton.addEventListener('click', function() {
+            index++;
+            var html = `
+                <div class="form-group">
+                    <label for="capillary_pressure_L_${index}" class="form-label">Capillary pressure in the lab ${index} (Pa)</label>
+                    <input type="number" step="any" name="capillary_pressure_L_${index}" id="capillary_pressure_L_${index}" class="form-control" required>
+                </div>
+                <div class="form-group">
+                    <label for="saturation_${index}" class="form-label">Saturation ${index}</label>
+                    <input type="number" step="any" min="0" max="1" name="saturation_${index}" id="saturation_${index}" class="form-control" required>
+                </div>
+            `;
+            inputContainer.insertAdjacentHTML('beforeend', html);
+        });
+    });
+</script>
+
+{% endblock %}

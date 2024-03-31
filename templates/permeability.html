@@ -1,65 +1,10 @@
 {% extends "layout.html" %}
 
-{% block title %}Calculating permeability{% endblock %}
+{% block title %}Permeability Calculator{% endblock %}
 
 {% block content %}
 
-<style>
-    /* Custom styles for permeability.html */
-
-    /* Default styles for screens less than or equal to 1000px */
-    .form-container {
-        max-width: 500px;
-        margin: auto;
-    }
-
-    .form-group {
-        margin-bottom: 10px;
-    }
-
-    .form-label {
-        font-weight: bold;
-    }
-
-    .form-control {
-        width: 100%;
-    }
-
-    .submit-button {
-        width: 100%;
-    }
-
-    .result-container {
-        max-width: 500px;
-        margin: auto;
-    }
-
-    /* Media query for screens wider than 1000px */
-    @media screen and (min-width: 1001px) {
-        .form-container {
-            max-width: 1000px;
-        }
-
-        .form-group {
-            display: flex;
-            align-items: center;
-        }
-
-        .form-label {
-            flex: 1;
-            margin-right: 10px;
-        }
-
-        .form-control {
-            flex: 2;
-        }
-
-        .result-container {
-            max-width: 1000px;
-            margin: auto;
-        }
-    }
-</style>
+<link rel="stylesheet" type="text/css" href="../static/styles.css">
 
 <div class="container">
     <h1 class="text-center my-2">Permeability Calculator</h1>
@@ -82,12 +27,12 @@
             </div>
 
             <div class="form-group">
-                <label for="angle" class="form-label">Core inclination (degrees) (positive is downhill, negative is uphill)</label>
+                <label for="angle" class="form-label">Flow direction (degrees) (positive is downhill, negative is uphill)</label>
                 {{ form.angle(class="form-control") }}
             </div>
 
             <div class="form-group">
-                <label for="flowrate" class="form-label">Fluid flow rate (\(\text{cm}^3/\text{s}\))</label>
+                <label for="flowrate" class="form-label">Flow rate (\(\text{cm}^3/\text{s}\))</label>
                 {{ form.flowrate(class="form-control") }}
             </div>
 
@@ -119,15 +64,43 @@
 
     {% if permeability %}
     <div class="result-container my-20">
-        <h3>Permeability: {{ permeability }} D</h3>
+        <h3>Permeability: {{ '%.1e'|format(permeability) }} D</h3>
         <br />
     </div>
     {% endif %}
 
     <br />
 
-    Example:
+    <h3>Background</h3>
+
+    Permeability is the cross-sectional area of the smallest throat in a medium that a fluid must move through to flow through the medium.
+    It depends on the pore structure. As it has a very low value, it is usually expressed in Darcy (\(D\)), where \(1 \; \text{D} \approx 10^{-12} \; \text{m}^2\).
     <br />
+
+    This calculator is supported by Darcy's law, the equation of the volume-averaged flow velocity in a porous medium, assuming slow steady-state flow (no turbulence, no time-dependent term).
+    \[ \boldsymbol{q} = -\frac{K}{\mu} \left( \nabla P - \rho \boldsymbol{g} \right) \]
+    <ul type="none">
+        <li>\(\boldsymbol{q}\) = Darcy velocity of the fluid (\( \text{m/s} \))</li>
+        <li>\(K\) = Permeability of the medium (\( \text{m}^2 \))</li>
+        <li>\(\mu\) = Fluid viscosity (\( \text{Pa.s} \))</li>
+        <li>\(\nabla P\) = Pressure gradient of the fluid across the medium (\( \text{Pa/m} \))</li>
+        <li>\(\rho\) = Fluid density (\( \text{kg}/\text{m}^3 \))</li>
+        <li>\(\boldsymbol{g}\) = Gravitational acceleration (\( \text{m}/\text{s}^2 \))</li>
+    </ul>
+
+    Darcy velocity/flux is not a flow velocity, but a macro-scale volumetric flow rate (\( \boldsymbol{Q} \;(\text{m}^3/\text{s}) \)) per unit area (\( A \;(\text{m}^2) \)) through the cross section of a medium, that is:
+    \[ \boldsymbol{q} = \frac{\boldsymbol{Q}}{A} \]
+
+    Since fluids can only flow through the pore space, the Darcy velocity is related to the interstitial velocity (\( \boldsymbol{v} \)) by the porosity (\( \phi \)):
+    \[ \boldsymbol{v} = \frac{\boldsymbol{q}}{\phi} \]
+
+    Some fluids have a retardation property since their molecules like to stick to the solid, making the interstitial velocity lower.
+    The property is quantified by the retardation coefficient (\( R \)). For conservative (non-tracing) tracer (no retardation effect), \( R=1 \); otherwise, \( R>1 \).
+    The interstitial velocity is then:
+    \[ \boldsymbol{v} = \frac{\boldsymbol{q}}{\phi R} \]
+
+    <h3>Example</h3>
+
     An experiment is performed on a core inclined by 30 degrees from the horizontal. 
     The cross-sectional area is 10 \(\text{cm}^2\). 
     Water flows through the core in the downhill direction at a rate of 20 \(\text{cm}^3\) per minute.
@@ -144,7 +117,7 @@
     <br />
     The diagram below shows the experiment conducted to measure the permeability of the rock.
     <br />
-    <img class="mx-auto d-block" src="../static/permeability_example.png" alt="Permeability example" width="500px" />
+    <img class="mx-auto d-block img-content" src="../static/permeability_example.png" alt="Permeability example" />
     <br />
     Recall the 1D Darcy's law (in the x-direction):
     \[
