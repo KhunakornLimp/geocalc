@@ -159,6 +159,8 @@ def leverett():
                 i += 1
             else:
                 break
+        # TO DO: allow same saturation values but
+        # different capillary pressures in the lab
         S_and_Pc_lab = dict(sorted(S_and_Pc_lab.items()))
         saturations = list(S_and_Pc_lab.keys())
         capillary_pressures_L = list(S_and_Pc_lab.values())
