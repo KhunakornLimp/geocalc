@@ -5,6 +5,8 @@ from wtforms.validators import DataRequired, NumberRange
 from math import pi, sin, radians, sqrt
 import matplotlib
 import matplotlib.pyplot as plt
+import numpy as np
+from scipy.interpolate import CubicSpline
 matplotlib.use('Agg')  # Set the backend before importing pyplot
 
 app = Flask(__name__)
@@ -78,6 +80,40 @@ class Leverett(FlaskForm):
                                             NumberRange(min=0)])
     # Submit button
     submit = SubmitField('Calculate')
+
+
+class OptimalFlotation(FlaskForm):
+    price_per_ton_metal = \
+        FloatField('Price per ton of metal ($)',
+                   validators=[DataRequired(), NumberRange(min=0)])
+    charge_per_ton_conc = \
+        FloatField('Treatment charge per ton of concentrate ($)',
+                   validators=[DataRequired(), NumberRange(min=0)])
+    feed_flowrate = \
+        FloatField('Feed flowrate (tph)',
+                   validators=[DataRequired(), NumberRange(min=0)])
+    feed_grade = \
+        FloatField('Feed grade (%)',
+                   validators=[DataRequired(), NumberRange(min=0, max=100)])
+    submit = SubmitField('Calculate')
+
+
+def calculate_flotation_profit(price_per_ton_metal, charge_per_ton_conc,
+                               feed_flowrate, feed_grade, recoveries,
+                               final_conc_grades):
+    profits = []
+    metal_feed_flowrate = feed_flowrate * feed_grade / 100
+    for i in range(len(recoveries)):
+        metal_final_conc_flowrate = \
+            metal_feed_flowrate * recoveries[i] / 100
+        final_conc_flowrate = \
+            metal_final_conc_flowrate / (final_conc_grades[i] / 100)
+        # Revenues from selling metal
+        # Treatment charges from selling concentrates
+        revenue = metal_final_conc_flowrate * price_per_ton_metal
+        charge = final_conc_flowrate * charge_per_ton_conc
+        profits.append(revenue - charge)
+    return profits
 
 
 @app.route('/')
@@ -191,7 +227,7 @@ def leverett():
         plt.xlabel('Saturation')
         plt.ylabel('Capillary pressure (Pa)')
         plt.legend()
-        plt.savefig('static/leverett.png')
+        plt.savefig('static/leverett.png', bbox_inches='tight')
         plt.close()
 
     return render_template(
@@ -200,6 +236,114 @@ def leverett():
         saturations=saturations,
         capillary_pressures_L=capillary_pressures_L,
         capillary_pressures_F=capillary_pressures_F,
+    )
+
+
+@app.route('/optimal-flotation', methods=['GET', 'POST'])
+def optimal_flotation():
+    calculator = OptimalFlotation()
+    price_per_ton_metal, charge_per_ton_conc, feed_flowrate, feed_grade = \
+        0, 0, 0, 0
+    recoveries, final_conc_grades, profits = [], [], []
+    if calculator.validate_on_submit():
+        price_per_ton_metal = calculator.price_per_ton_metal.data
+        charge_per_ton_conc = calculator.charge_per_ton_conc.data
+        feed_flowrate = calculator.feed_flowrate.data
+        feed_grade = calculator.feed_grade.data
+        recoveries_and_final_conc_grades = {}
+
+        # Get the recovery and final concentrate grade values
+        i = 1
+        while True:
+            recovery_name = f'recovery_{i}'
+            final_conc_grade_name = f'final_conc_grade_{i}'
+            form = request.form
+            if recovery_name in form and final_conc_grade_name in form:
+                recovery = float(form[recovery_name])
+                final_conc_grade = float(form[final_conc_grade_name])
+                recoveries_and_final_conc_grades[recovery] = final_conc_grade
+                i += 1
+            else:
+                break
+
+        recoveries_and_final_conc_grades = \
+            dict(sorted(recoveries_and_final_conc_grades.items()))
+        recoveries = list(recoveries_and_final_conc_grades.keys())
+        final_conc_grades = list(recoveries_and_final_conc_grades.values())
+
+        profits = calculate_flotation_profit(price_per_ton_metal,
+                                             charge_per_ton_conc,
+                                             feed_flowrate,
+                                             feed_grade,
+                                             recoveries,
+                                             final_conc_grades)
+
+    else:
+        print(calculator.errors)
+
+    # The status of the maximum profit - unknown error by default
+    status = "Unknown error!"
+    if profits:
+        fig, axs = plt.subplots(1, 2, figsize=(14, 4))
+        # Grade-recovery curve - natural cubic spline interpolation
+        axs[0].plot(recoveries, final_conc_grades, 'r.')
+        interpolant = CubicSpline(recoveries, final_conc_grades)
+        interpolated_recoveries = \
+            np.linspace(min(recoveries), max(recoveries), 1000)
+        interpolated_final_conc_grades = interpolant(interpolated_recoveries)
+        axs[0].plot(interpolated_recoveries,
+                    interpolated_final_conc_grades,
+                    'r-')
+        axs[0].set(
+            xlabel='Recovery (%)',
+            ylabel='Grade of final concentrate (%)',
+            title='Grade-recovery curve',
+        )
+        # Profit-recovery curve - interpolate based on grade-recovery curve
+        axs[1].plot(recoveries, profits, 'r.')
+        interpolated_profits = calculate_flotation_profit(
+            price_per_ton_metal, charge_per_ton_conc,
+            feed_flowrate, feed_grade,
+            interpolated_recoveries, interpolated_final_conc_grades)
+        axs[1].plot(interpolated_recoveries, interpolated_profits, 'r-')
+        opt_pos = \
+            np.where(interpolated_profits == max(interpolated_profits))[0][0]
+        if opt_pos != 0 and opt_pos != 999:
+            axs[1].plot(interpolated_recoveries[opt_pos],
+                        interpolated_profits[opt_pos],
+                        '*', c='#00ccff', markersize=10, label='Optimum')
+            if max(interpolated_profits) <= 0:
+                status = "Non-profitable operation!"
+            else:
+                status = "The maximum profit is approximately " + \
+                    f"${max(interpolated_profits):.1f} per hour, " + \
+                    "which can be achieved at a recovery of " + \
+                    f"{interpolated_recoveries[opt_pos]:.2f}% and a grade " + \
+                    f"of {interpolated_final_conc_grades[opt_pos]:.2f}%."
+        elif opt_pos == 0:
+            status = "A lower recovery could lead to a higher profit."
+            if max(interpolated_profits) < 0:
+                status += " However, it may not be profitable."
+        else:  # opt_pos == 999
+            status = "A higher recovery could lead to a higher profit."
+            if max(interpolated_profits) < 0:
+                status += " However, it may not be profitable."
+        axs[1].set(
+            xlabel='Recovery (%)',
+            ylabel='Profit ($/hr)',
+            title='Profit-recovery curve',
+        )
+        axs[1].legend()
+        plt.savefig('static/flotation_curves.png', bbox_inches='tight')
+        plt.close()
+
+    return render_template(
+        'optimal_flotation.html',
+        form=calculator,
+        recoveries=recoveries,
+        final_conc_grades=final_conc_grades,
+        profits=profits,
+        status=status,
     )
 
 

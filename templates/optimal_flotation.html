@@ -1,0 +1,135 @@
+{% extends "layout.html" %}
+
+{% block title %}Financial Optimisation of Flotation{% endblock %}
+
+{% block content %}
+
+<link rel="stylesheet" type="text/css" href="../static/styles.css">
+
+<div class="container">
+    <h1 class="text-center my-2">Financial Optimisation of Flotation</h1>
+    
+    The optimal point of flotation and the corresponding profit can be estimated here.
+    The estimation is backed by the cubic spline interpolation of the grade-recovery curve.
+    <br /><br />
+
+    <div class="form-container">
+        <form method="POST" action="" class="form">
+            {{ form.hidden_tag() }}
+            
+            <div class="form-group">
+                <label for="price_per_ton_metal" class="form-label">Metal price ($/ton)</label>
+                {{ form.price_per_ton_metal(class="form-control") }}
+            </div>
+            <div class="form-group">
+                <label for="charge_per_ton_conc" class="form-label">Treatment charge ($/ton)</label>
+                {{ form.charge_per_ton_conc(class="form-control") }}
+            </div>
+            <div class="form-group">
+                <label for="feed_flowrate" class="form-label">Feed flowrate (tph)</label>
+                {{ form.feed_flowrate(class="form-control") }}
+            </div>
+            <div class="form-group">
+                <label for="feed_grade" class="form-label">Feed grade (%)</label>
+                {{ form.feed_grade(class="form-control") }}
+            </div>
+            <hr />
+            Input pairs of values of the recovery and the grade of final concentrate:
+            <ul>
+                <li>Please order your input from the lower to the higher recovery without a duplicate.</li>
+                <li>Your input must obey the grade-recovery inverse relationship, i.e, a higher recovery is associated with a lower grade of final concentrate.</li>
+                <li>At least two pairs are required for the interpolation, but more pairs give more accurate results.</li>
+            </ul>
+            <div class="form-group">
+                <label for="recovery_1" class="form-label">Recovery 1 (%)</label>
+                <input type="number" step="any" min="0" max="100" name="recovery_1" id="recovery_1" class="form-control" required>
+            </div>
+            <div class="form-group">
+                <label for="final_conc_grade_1" class="form-label">Grade of final concentrate 1 (%)</label>
+                <input type="number" step="any" min="0" max="100" name="final_conc_grade_1" id="final_conc_grade_1" class="form-control" required>
+            </div>
+            <div id="additional-inputs"></div>
+            <button type="button" class="btn btn-info" id="add-more">Add more</button>
+            <hr />
+
+            <button type="submit" class="btn btn-success submit-button" id="calculate-button">Calculate</button>
+        </form>
+    </div>
+
+    <br />
+
+    {% if profits %}
+        <div class="result-container my-20">
+            <h3>Profits:</h3>
+            <table class="table">
+                <thead>
+                    <tr>
+                        <th>Recovery (%)</th>
+                        <th>Grade of final concentrate (%)</th>
+                        <th>Profit ($/hr)</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    {% for i in range(profits|length) %}
+                        <tr>
+                            <td>{{ recoveries[i] }}</td>
+                            <td>{{ final_conc_grades[i] }}</td>
+                            <td>{{ '%.1f'|format(profits[i]) }}</td>
+                        </tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+            <div class="text-center">
+                <img src="{{ url_for('static', filename='flotation_curves.png') }}" alt="Flotation curves" class="img-fluid">
+            </div>
+            <h3>{{ status }}</h3>
+        </div>
+    {% endif %}
+    
+    <hr />
+</div>
+
+<script>
+    document.addEventListener("DOMContentLoaded", function() {
+        var addButton = document.getElementById('add-more');
+        var inputContainer = document.getElementById('additional-inputs');
+        var index = 1;
+
+        addButton.addEventListener('click', function() {
+            index++;
+            var html = `
+                <div class="form-group">
+                    <label for="recovery_${index}" class="form-label">Recovery ${index} (%)</label>
+                    <input type="number" step="any" min="0" max="100" name="recovery_${index}" id="recovery_${index}" class="form-control" required>
+                </div>
+                <div class="form-group">
+                    <label for="final_conc_grade_${index}" class="form-label">Grade of final concentrate ${index} (%)</label>
+                    <input type="number" step="any" min="0" max="100" name="final_conc_grade_${index}" id="final_conc_grade_${index}" class="form-control" required>
+                </div>
+            `;
+            inputContainer.insertAdjacentHTML('beforeend', html);
+
+            // Set the limit for the new recovery and grade input so that
+            // a lower recovery is associated with a higher grade of concentrate
+            var prevRecoveryInput = document.getElementById(`recovery_${index - 1}`);
+            var prevGradeInput = document.getElementById(`final_conc_grade_${index - 1}`);
+            var recoveryInput = document.getElementById(`recovery_${index}`);
+            var gradeInput = document.getElementById(`final_conc_grade_${index}`);
+            
+            recoveryInput.min = parseFloat(prevRecoveryInput.value) + 0.01;
+            gradeInput.max = parseFloat(prevGradeInput.value) - 0.01;
+        });
+
+        // At least two sets of recovery and grade of final concentrates are required
+        document.getElementById('calculate-button').addEventListener('click', function(event) {
+            var recoveries = document.querySelectorAll('[name^="recovery_"]');
+            var finalConcentrates = document.querySelectorAll('[name^="final_conc_grade_"]');
+            if (recoveries.length < 2 || finalConcentrates.length < 2) {
+                alert('Please input at least two sets of recovery and grade of final concentrates.');
+                event.preventDefault(); // Prevent form submission
+            }
+        });
+    });
+</script>
+
+{% endblock %}
