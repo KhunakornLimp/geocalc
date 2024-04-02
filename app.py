@@ -83,18 +83,6 @@ class Leverett(FlaskForm):
 
 
 class OptimalFlotation(FlaskForm):
-    price_per_ton_metal = \
-        FloatField('Price per ton of metal ($)',
-                   validators=[DataRequired(), NumberRange(min=0)])
-    charge_per_ton_conc = \
-        FloatField('Treatment charge per ton of concentrate ($)',
-                   validators=[DataRequired(), NumberRange(min=0)])
-    feed_flowrate = \
-        FloatField('Feed flowrate (tph)',
-                   validators=[DataRequired(), NumberRange(min=0)])
-    feed_grade = \
-        FloatField('Feed grade (%)',
-                   validators=[DataRequired(), NumberRange(min=0, max=100)])
     submit = SubmitField('Calculate')
 
 
@@ -114,6 +102,10 @@ def calculate_flotation_profit(price_per_ton_metal, charge_per_ton_conc,
         charge = final_conc_flowrate * charge_per_ton_conc
         profits.append(revenue - charge)
     return profits
+
+
+class PartitionCurve(FlaskForm):
+    submit = SubmitField('Calculate')
 
 
 @app.route('/')
@@ -242,14 +234,13 @@ def leverett():
 @app.route('/optimal-flotation', methods=['GET', 'POST'])
 def optimal_flotation():
     calculator = OptimalFlotation()
-    price_per_ton_metal, charge_per_ton_conc, feed_flowrate, feed_grade = \
-        0, 0, 0, 0
     recoveries, final_conc_grades, profits = [], [], []
     if calculator.validate_on_submit():
-        price_per_ton_metal = calculator.price_per_ton_metal.data
-        charge_per_ton_conc = calculator.charge_per_ton_conc.data
-        feed_flowrate = calculator.feed_flowrate.data
-        feed_grade = calculator.feed_grade.data
+        form = request.form
+        price_per_ton_metal = float(form['price_per_ton_metal'])
+        charge_per_ton_conc = float(form['charge_per_ton_conc'])
+        feed_flowrate = float(form['feed_flowrate'])
+        feed_grade = float(form['feed_grade'])
         recoveries_and_final_conc_grades = {}
 
         # Get the recovery and final concentrate grade values
@@ -257,7 +248,6 @@ def optimal_flotation():
         while True:
             recovery_name = f'recovery_{i}'
             final_conc_grade_name = f'final_conc_grade_{i}'
-            form = request.form
             if recovery_name in form and final_conc_grade_name in form:
                 recovery = float(form[recovery_name])
                 final_conc_grade = float(form[final_conc_grade_name])
@@ -345,6 +335,83 @@ def optimal_flotation():
         profits=profits,
         status=status,
     )
+
+
+@app.route('/partition-curve', methods=['GET', 'POST'])
+def partition_curve():
+    calculator = PartitionCurve()
+    representative_sizes, partition_numbers = [], []
+    if calculator.validate_on_submit():
+        form = request.form
+        feed_flowrate = float(form['feed_flowrate'])
+        coarse_flowrate = float(form['coarse_flowrate'])
+        total_mass_recovery = coarse_flowrate / feed_flowrate
+        upper_limit_sizes, percentages_in_feed, percentages_in_coarse = \
+            [], [], []
+
+        # Get the recovery and final concentrate grade values
+        i = 1
+        while True:
+            # Check if the form has the required fields
+            upper_limit_size_name = f'upper_limit_size_{i}'
+            percentage_in_feed_name = f'percentage_in_feed_{i}'
+            percentage_in_coarse_name = f'percentage_in_coarse_{i}'
+            check = upper_limit_size_name in form
+            check = check and percentage_in_feed_name in form
+            check = check and percentage_in_coarse_name in form
+            if check:
+                upper_limit_sizes.append(float(form[upper_limit_size_name]))
+                percentages_in_feed.append(
+                    float(form[percentage_in_feed_name])
+                )
+                percentages_in_coarse.append(
+                    float(form[percentage_in_coarse_name])
+                )
+                i += 1
+            else:
+                break
+
+        for i in range(len(percentages_in_feed)):
+            if i < len(percentages_in_feed) - 1:
+                representative_sizes.append(
+                    sqrt(upper_limit_sizes[i] * upper_limit_sizes[i+1])
+                )
+            else:
+                representative_sizes.append(upper_limit_sizes[i] / 2)
+            partition_numbers.append(total_mass_recovery *
+                                     percentages_in_coarse[i] /
+                                     percentages_in_feed[i])
+
+    else:
+        print(calculator.errors)
+
+    bypass, cutsize = None, None
+    if representative_sizes:
+        # Find bypass and cutsize
+        bypass = partition_numbers[-1]
+        for i in range(len(partition_numbers) - 1):
+            if partition_numbers[i] >= 0.5 and partition_numbers[i + 1] < 0.5:
+                slope = (partition_numbers[i] - partition_numbers[i + 1]) / \
+                    (representative_sizes[i] - representative_sizes[i + 1])
+                cutsize = representative_sizes[i] + \
+                    (0.5 - partition_numbers[i]) / slope
+                break
+
+        # Plot the partition curve
+        plt.plot([min(representative_sizes), max(representative_sizes)],
+                 [0.5, 0.5], '--', c='gray')
+        plt.plot(representative_sizes, partition_numbers, '.-')
+        plt.xlabel('Particle size (μm)')
+        plt.ylabel('Partition number')
+        plt.xscale("log")
+        plt.title('Partition curve')
+        plt.savefig('static/partition_curve.png', bbox_inches='tight')
+        plt.close()
+
+    return render_template('partition_curve.html',
+                           form=calculator,
+                           bypass=bypass,
+                           cutsize=cutsize)
 
 
 if __name__ == '__main__':

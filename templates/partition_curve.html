@@ -1,0 +1,143 @@
+{% extends "layout.html" %}
+
+{% block title %}Partition curve{% endblock %}
+
+{% block content %}
+
+<link rel="stylesheet" type="text/css" href="../static/styles.css">
+
+<div class="container">
+    <h1 class="text-center my-2">Partition curve</h1>
+    <p>Generate the partition curve of a size separator in a mineral processing plant.</p>
+
+    <div class="form-container">
+        <form id="partition-curve-form" method="POST" action="">
+            {{ form.hidden_tag() }}
+            <div class="form-group">
+                <label for="feed_flowrate" class="form-label">Flowrate in feed (tph)</label>
+                <input type="number" step="any" min="0" name="feed_flowrate" id="feed_flowrate" class="form-control" required>
+            </div>
+            <div class="form-group">
+                <label for="coarse_flowrate" class="form-label">Flowrate in coarse stream (tph)</label>
+                <input type="number" step="any" min="0" name="coarse_flowrate" id="coarse_flowrate" class="form-control" required>
+            </div>
+            <hr />
+            <table id="partition-curve-table" class="table">
+                <thead>
+                    <tr>
+                        <th>Upper Limit of Particle Size Class (μm)</th>
+                        <th>% in Feed</th>
+                        <th>% in Coarse Stream</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    <tr>
+                        <td>
+                            <input type="number" step="any" min="1" name="upper_limit_size_1" id="upper_limit_size_1" class="form-control" required>
+                        </td>
+                        <td>
+                            <input type="number" step="any" min="0" max="100" name="percentage_in_feed_1" id="percentage_in_feed_1" class="form-control" required>
+                        </td>
+                        <td>
+                            <input type="number" step="any" min="0" max="100" name="percentage_in_coarse_1" id="percentage_in_coarse_1" class="form-control" required>
+                        </td>
+                    </tr>
+                </tbody>
+            </table>
+            <div id="additional-inputs"></div>
+            <button type="button" class="btn btn-info" id="add-more">Add more</button>
+            <hr />
+            <button type="submit" class="btn btn-success submit-button" id="calculate-button">Calculate</button>
+        </form>
+    </div>
+</div>
+
+<br />
+
+{% if bypass %}
+    <div class="result-container my-20">
+        <div class="text-center">
+            <img src="{{ url_for('static', filename='partition_curve.png') }}" alt="Partition curve" class="img-fluid">
+        </div>
+        <b>Bypass = {{ '%.2f'|format(bypass) }}</b>
+        <br />
+        {% if cutsize %}
+            <b>Cutsize = {{ '%.1f'|format(cutsize) }} μm</b>
+        {% endif %}
+    </div>
+{% endif %}
+
+<hr />
+
+<script>
+    document.addEventListener("DOMContentLoaded", function() {
+        // Add row to the table
+        var addButton = document.getElementById('add-more');
+        var tableBody = document.querySelector('#partition-curve-table tbody');
+        var index = 1;
+
+        addButton.addEventListener('click', function() {
+            index++;
+            var html = `
+                <tr>
+                    <td><input type="number" step="any" min="1" name="upper_limit_size_${index}" id="upper_limit_size_${index}" class="form-control" required></td>
+                    <td><input type="number" step="any" min="0" max="100" name="percentage_in_feed_${index}" id="percentage_in_feed_${index}" class="form-control" required></td>
+                    <td><input type="number" step="any" min="0" max="100" name="percentage_in_coarse_${index}" id="percentage_in_coarse_${index}" class="form-control" required></td>
+                </tr>`;
+                
+            tableBody.insertAdjacentHTML('beforeend', html);
+        });
+
+        // Once Calculate button is clicked
+        document.getElementById('calculate-button').addEventListener('click', function(event) {
+            var feedFlowrate = parseFloat(document.getElementById('feed_flowrate').value);
+            var coarseFlowrate = parseFloat(document.getElementById('coarse_flowrate').value);
+            var upperLimitSizesInputs = document.querySelectorAll('[name^="upper_limit_size_"]');
+            var percentagesInFeedInputs = document.querySelectorAll('[name^="percentage_in_feed_"]');
+            var percentagesInCoarseInputs = document.querySelectorAll('[name^="percentage_in_coarse_"]');
+
+            // Prevent form submission if any input is zero
+            if (feedFlowrate === 0 || coarseFlowrate === 0) {
+                alert('Flowrates cannot be zero.');
+                event.preventDefault(); // Prevent form submission
+            }
+
+            // Check if the feed flowrate is greater than the coarse flowrate
+            if (feedFlowrate <= coarseFlowrate) {
+                alert('The flowrate of feed must be greater than the flowrate in the coarse stream.');
+                event.preventDefault(); // Prevent form submission
+            }
+
+            // At least two rows of inputs are required
+            if (upperLimitSizesInputs.length < 2 || percentagesInFeedInputs.length < 2 || percentagesInCoarseInputs.length < 2) {
+                alert('Please input at least two rows of inputs.');
+                event.preventDefault(); // Prevent form submission
+            }
+
+            // Check if the upper limit sizes are in descending order
+            for (var i = 1; i < upperLimitSizesInputs.length; i++) {
+                if (parseFloat(upperLimitSizesInputs[i].value) >= parseFloat(upperLimitSizesInputs[i - 1].value)) {
+                    alert('The upper limit sizes must be in descending order.');
+                    event.preventDefault(); // Prevent form submission
+                }
+            }
+
+            // Calculate the sum of percentages in feed and percentages in coarse
+            var sumInFeed = Array.from(percentagesInFeedInputs).reduce(function(sum, input) {
+                return sum + parseFloat(input.value || 0);
+            }, 0);
+
+            var sumInCoarse = Array.from(percentagesInCoarseInputs).reduce(function(sum, input) {
+                return sum + parseFloat(input.value || 0);
+            }, 0);
+
+            // Check if the sum in the "% in feed" column and the "% in coarse" column is 100
+            if (sumInFeed !== 100 || sumInCoarse !== 100) {
+                alert('The sum of percentages in the "% in feed" column and "% in coarse" column should be 100.');
+                event.preventDefault(); // Prevent form submission
+            }
+        });
+    });
+</script>
+
+{% endblock %}

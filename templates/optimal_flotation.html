@@ -19,19 +19,19 @@
             
             <div class="form-group">
                 <label for="price_per_ton_metal" class="form-label">Metal price ($/ton)</label>
-                {{ form.price_per_ton_metal(class="form-control") }}
+                <input type="number" step="any" min="0" name="price_per_ton_metal" id="price_per_ton_metal" class="form-control" required>
             </div>
             <div class="form-group">
                 <label for="charge_per_ton_conc" class="form-label">Treatment charge ($/ton)</label>
-                {{ form.charge_per_ton_conc(class="form-control") }}
+                <input type="number" step="any" min="0" name="charge_per_ton_conc" id="charge_per_ton_conc" class="form-control" required>
             </div>
             <div class="form-group">
                 <label for="feed_flowrate" class="form-label">Feed flowrate (tph)</label>
-                {{ form.feed_flowrate(class="form-control") }}
+                <input type="number" step="any" min="0" name="feed_flowrate" id="feed_flowrate" class="form-control" required>
             </div>
             <div class="form-group">
                 <label for="feed_grade" class="form-label">Feed grade (%)</label>
-                {{ form.feed_grade(class="form-control") }}
+                <input type="number" step="any" min="0" max="100" name="feed_grade" id="feed_grade" class="form-control" required>
             </div>
             <hr />
             Input pairs of values of the recovery and the grade of final concentrate:
@@ -51,7 +51,6 @@
             <div id="additional-inputs"></div>
             <button type="button" class="btn btn-info" id="add-more">Add more</button>
             <hr />
-
             <button type="submit" class="btn btn-success submit-button" id="calculate-button">Calculate</button>
         </form>
     </div>
@@ -108,22 +107,43 @@
                 </div>
             `;
             inputContainer.insertAdjacentHTML('beforeend', html);
-
-            // Set the limit for the new recovery and grade input so that
-            // a lower recovery is associated with a higher grade of concentrate
-            var prevRecoveryInput = document.getElementById(`recovery_${index - 1}`);
-            var prevGradeInput = document.getElementById(`final_conc_grade_${index - 1}`);
-            var recoveryInput = document.getElementById(`recovery_${index}`);
-            var gradeInput = document.getElementById(`final_conc_grade_${index}`);
-            
-            recoveryInput.min = parseFloat(prevRecoveryInput.value) + 0.01;
-            gradeInput.max = parseFloat(prevGradeInput.value) - 0.01;
         });
 
-        // At least two sets of recovery and grade of final concentrates are required
+        // Once Calculate button is clicked
         document.getElementById('calculate-button').addEventListener('click', function(event) {
+            var pricePerTonMetal = parseFloat(document.getElementById('price_per_ton_metal').value);
+            var chargePerTonConc = parseFloat(document.getElementById('charge_per_ton_conc').value);
+            var feedFlowrate = parseFloat(document.getElementById('feed_flowrate').value);
+            var feedGrade = parseFloat(document.getElementById('feed_grade').value);
             var recoveries = document.querySelectorAll('[name^="recovery_"]');
             var finalConcentrates = document.querySelectorAll('[name^="final_conc_grade_"]');
+
+            // Check if all inputs are not zero
+            if (pricePerTonMetal === 0 || chargePerTonConc === 0 || feedFlowrate === 0 || feedGrade === 0) {
+                alert('Please input non-zero values for all fields.');
+                event.preventDefault(); // Prevent form submission
+            }
+            for (var i = 0; i < recoveries.length; i++) {
+                if (parseFloat(recoveries[i].value) === 0 || parseFloat(finalConcentrates[i].value) === 0) {
+                    alert('Please input non-zero values for all recovery and grade fields.');
+                    event.preventDefault(); // Prevent form submission
+                }
+            }
+
+            // Check if the values of recovery are in ascending order and
+            // the values of grade of final concentrate are in descending order
+            for (var i = 1; i < recoveries.length; i++) {
+                if (parseFloat(recoveries[i].value) <= parseFloat(recoveries[i - 1].value)) {
+                    alert('The recovery values must be in ascending order.');
+                    event.preventDefault(); // Prevent form submission
+                }
+                if (parseFloat(finalConcentrates[i].value) >= parseFloat(finalConcentrates[i - 1].value)) {
+                    alert('A higher recovery must be associated with a lower grade of final concentrate.');
+                    event.preventDefault(); // Prevent form submission
+                }
+            }
+
+            // At least two sets of recovery and grade of final concentrates are required
             if (recoveries.length < 2 || finalConcentrates.length < 2) {
                 alert('Please input at least two sets of recovery and grade of final concentrates.');
                 event.preventDefault(); // Prevent form submission
