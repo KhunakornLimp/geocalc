@@ -213,6 +213,12 @@
                 alert('Except for flow direction, please enter positive values only.');
                 event.preventDefault(); // Prevent form submission
             }
+
+            // Check if outlet pressure is less than inlet pressure
+            if (outletPressure >= inletPressure) {
+                alert('Outlet pressure must be less than inlet pressure.');
+                event.preventDefault(); // Prevent form submission
+            }
         });
     });
 </script>
