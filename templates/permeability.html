@@ -1,13 +1,13 @@
 {% extends "layout.html" %}
 
-{% block title %}Permeability Calculator{% endblock %}
+{% block title %}Permeability{% endblock %}
 
 {% block content %}
 
 <link rel="stylesheet" type="text/css" href="../static/styles.css">
 
 <div class="container">
-    <h1 class="text-center my-2">Permeability Calculator</h1>
+    <h1 class="text-center my-2">Permeability</h1>
     <p>The permeability of a cylindrical core sample can be calculated here.</p>
 
     <br />
@@ -18,45 +18,45 @@
             
             <div class="form-group">
                 <label for="radius" class="form-label">Core cross-sectional radius (\(\text{cm}\))</label>
-                {{ form.radius(class="form-control") }}
+                <input type="number" step="any" min="0" name="radius" id="radius" class="form-control" required>
             </div>
 
             <div class="form-group">
                 <label for="length" class="form-label">Core length (\(\text{cm}\))</label>
-                {{ form.length(class="form-control") }}
+                <input type="number" step="any" min="0" name="length" id="length" class="form-control" required>
             </div>
 
             <div class="form-group">
                 <label for="angle" class="form-label">Flow direction (degrees) (positive is downhill, negative is uphill)</label>
-                {{ form.angle(class="form-control") }}
+                <input type="number" step="any" min="-90" max="90" name="angle" id="angle" class="form-control" required>
             </div>
 
             <div class="form-group">
                 <label for="flowrate" class="form-label">Flow rate (\(\text{cm}^3/\text{s}\))</label>
-                {{ form.flowrate(class="form-control") }}
+                <input type="number" step="any" min="0" name="flowrate" id="flowrate" class="form-control" required>
             </div>
 
             <div class="form-group">
                 <label for="density" class="form-label">Fluid density (\(\text{kg}/\text{m}^3\))</label>
-                {{ form.density(class="form-control") }}
+                <input type="number" step="any" min="0" value="1000" name="density" id="density" class="form-control" required>
             </div>
 
             <div class="form-group">
                 <label for="viscosity" class="form-label">Fluid viscosity (\(\text{Pa.s}\))</label>
-                {{ form.viscosity(class="form-control") }}
+                <input type="number" step="any" min="0" value="0.001" name="viscosity" id="viscosity" class="form-control" required>
             </div>
 
             <div class="form-group">
                 <label for="inlet_pressure" class="form-label">Inlet pressure (\(\text{Pa}\))</label>
-                {{ form.inlet_pressure(class="form-control") }}
+                <input type="number" step="any" min="0" name="inlet_pressure" id="inlet_pressure" class="form-control" required>
             </div>
 
             <div class="form-group">
                 <label for="outlet_pressure" class="form-label">Outlet pressure (\(\text{Pa}\))</label>
-                {{ form.outlet_pressure(class="form-control") }}
+                <input type="number" step="any" min="0" name="outlet_pressure" id="outlet_pressure" class="form-control" required>
             </div>
 
-            <button type="submit" class="btn btn-success submit-button">Calculate</button>
+            <button type="submit" class="btn btn-success submit-button" id="calculate-button">Calculate</button>
         </form>
     </div>
 
@@ -194,5 +194,27 @@
     So, the permeability of the core is 6.0 \(\text{D}\). The water is moving through the core at a speed of \( 1.3 \times 10^{-3} \;\text{m/s} \), taking around 2.6 minutes.
     <hr />
 </div>
+
+<script>
+    document.addEventListener("DOMContentLoaded", function() {
+        // Once Calculate button is clicked
+        document.getElementById('calculate-button').addEventListener('click', function(event) {
+            var radius = parseFloat(document.getElementById('radius').value);
+            var length = parseFloat(document.getElementById('length').value);
+            var angle = parseFloat(document.getElementById('angle').value);
+            var flowrate = parseFloat(document.getElementById('flowrate').value);
+            var density = parseFloat(document.getElementById('density').value);
+            var viscosity = parseFloat(document.getElementById('viscosity').value);
+            var inletPressure = parseFloat(document.getElementById('inlet_pressure').value);
+            var outletPressure = parseFloat(document.getElementById('outlet_pressure').value);
+
+            // Check if all inputs are not zero
+            if (radius === 0 || length === 0 || flowrate === 0 || density === 0 || viscosity === 0 || inletPressure === 0 || outletPressure === 0) {
+                alert('Except for flow direction, please enter positive values only.');
+                event.preventDefault(); // Prevent form submission
+            }
+        });
+    });
+</script>
 
 {% endblock %}

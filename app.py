@@ -1,7 +1,6 @@
 from flask import Flask, render_template, request
 from flask_wtf import FlaskForm
-from wtforms import FloatField, SubmitField
-from wtforms.validators import DataRequired, NumberRange
+from wtforms import SubmitField
 from math import pi, sin, radians, sqrt
 import matplotlib
 import matplotlib.pyplot as plt
@@ -13,76 +12,7 @@ app = Flask(__name__)
 app.config['SECRET_KEY'] = 'mysecretkey'
 
 
-class PermeabilityCalculator(FlaskForm):
-    # Core properties
-    radius = FloatField('Core cross-sectional radius (cm)',
-                        validators=[DataRequired(), NumberRange(min=0)])
-    length = FloatField('Core length (cm)',
-                        validators=[DataRequired(), NumberRange(min=0)])
-    # Fluid properties
-    angle = FloatField('Flow direction (degrees)',
-                       validators=[DataRequired(),
-                                   NumberRange(min=-90, max=90)])
-    flowrate = FloatField('Fluid flow rate (cm^3/s)',
-                          validators=[DataRequired(), NumberRange(min=0)])
-    density = FloatField('Fluid density (kg/m^3)',
-                         validators=[NumberRange(min=0)],
-                         default=1000)  # Default value for water
-    viscosity = FloatField('Fluid viscosity (Pa.s)',
-                           validators=[NumberRange(min=0)],
-                           default=0.001)  # Default value for water
-    inlet_pressure = FloatField('Fluid inlet pressure (Pa)',
-                                validators=[DataRequired(),
-                                            NumberRange(min=0)])
-    outlet_pressure = FloatField('Fluid outlet pressure (Pa)',
-                                 validators=[DataRequired(),
-                                             NumberRange(min=0)])
-    # Submit button
-    submit = SubmitField('Calculate')
-
-
-class FlowUnderGravity(FlaskForm):
-    # Medium properties
-    permeability = FloatField('Permeability (D)',
-                              validators=[DataRequired(), NumberRange(min=0)])
-    # Fluid properties
-    density1 = FloatField('Fluid 1 density (kg/m^3)',
-                          validators=[DataRequired(), NumberRange(min=0)])
-    density2 = FloatField('Fluid 2 density (kg/m^3)',
-                          validators=[NumberRange(min=0)],
-                          default=0)
-    viscosity1 = FloatField('Fluid 1 viscosity (Pa.s)',
-                            validators=[DataRequired(), NumberRange(min=0)])
-    # Submit button
-    submit = SubmitField('Calculate')
-
-
-class Leverett(FlaskForm):
-    # In the lab (L)
-    interfacial_tension_L = FloatField('Interfacial tension in the lab (mN/m)',
-                                       validators=[DataRequired(),
-                                                   NumberRange(min=0)])
-    porosity_L = FloatField('Porosity in the lab',
-                            validators=[DataRequired(),
-                                        NumberRange(min=0, max=1)])
-    permeability_L = FloatField('Permeability in the lab (D)',
-                                validators=[DataRequired(),
-                                            NumberRange(min=0)])
-    # In the field (F)
-    interfacial_tension_F = \
-        FloatField('Interfacial tension in the field (mN/m)',
-                   validators=[DataRequired(), NumberRange(min=0)])
-    porosity_F = FloatField('Porosity in the field',
-                            validators=[DataRequired(),
-                                        NumberRange(min=0, max=1)])
-    permeability_F = FloatField('Permeability in the field (D)',
-                                validators=[DataRequired(),
-                                            NumberRange(min=0)])
-    # Submit button
-    submit = SubmitField('Calculate')
-
-
-class OptimalFlotation(FlaskForm):
+class BareCalculator(FlaskForm):
     submit = SubmitField('Calculate')
 
 
@@ -104,10 +34,6 @@ def calculate_flotation_profit(price_per_ton_metal, charge_per_ton_conc,
     return profits
 
 
-class PartitionCurve(FlaskForm):
-    submit = SubmitField('Calculate')
-
-
 @app.route('/')
 def index():
     return render_template('index.html')
@@ -115,17 +41,18 @@ def index():
 
 @app.route('/permeability', methods=['GET', 'POST'])
 def calculate_permeability():
-    calculator = PermeabilityCalculator()
+    calculator = BareCalculator()
     permeability = None
     if calculator.validate_on_submit():
-        radius = calculator.radius.data / 100  # Convert to m
-        length = calculator.length.data / 100  # Convert to m
-        angle = radians(calculator.angle.data)  # Convert to radians
-        flowrate = calculator.flowrate.data / 10**6  # Convert to m^3/s
-        density = calculator.density.data
-        viscosity = calculator.viscosity.data
-        inlet_pressure = calculator.inlet_pressure.data
-        outlet_pressure = calculator.outlet_pressure.data
+        form = request.form
+        radius = float(form['radius']) / 100  # Convert to m
+        length = float(form['length']) / 100  # Convert to m
+        angle = radians(float(form['angle']))
+        flowrate = float(form['flowrate']) / 10**6  # Convert to m^3/s
+        density = float(form['density'])
+        viscosity = float(form['viscosity'])
+        inlet_pressure = float(form['inlet_pressure'])
+        outlet_pressure = float(form['outlet_pressure'])
         # Calculate permeability
         darcy_velocity = flowrate / (pi * radius**2)
         gravity = 9.81 * sin(angle)
@@ -143,13 +70,15 @@ def calculate_permeability():
 
 @app.route('/flow-under-gravity', methods=['GET', 'POST'])
 def flow_under_g():
-    calculator = FlowUnderGravity()
-    darcy_velocity = None
+    calculator = BareCalculator()
+    permeability, density1, density2, viscosity1, darcy_velocity = \
+        None, None, None, None, None
     if calculator.validate_on_submit():
-        permeability = calculator.permeability.data
-        density1 = calculator.density1.data
-        density2 = calculator.density2.data
-        viscosity1 = calculator.viscosity1.data
+        form = request.form
+        permeability = float(form['permeability'])
+        density1 = float(form['density1'])
+        density2 = float(form['density2'])
+        viscosity1 = float(form['viscosity1'])
         # Calculate hydraulic conductivity (1-phase)
         # or Darcy velocity (2-phase)
         darcy_velocity = \
@@ -161,41 +90,38 @@ def flow_under_g():
 
     return render_template('flow_under_g.html',
                            form=calculator,
+                           density1=density1,
+                           density2=density2,
                            darcy_velocity=darcy_velocity)
 
 
 @app.route('/leverett', methods=['GET', 'POST'])
 def leverett():
-    calculator = Leverett()
+    calculator = BareCalculator()
     saturations, capillary_pressures_L, capillary_pressures_F = [], [], []
     if calculator.validate_on_submit():
-        interfacial_tension_L = calculator.interfacial_tension_L.data
-        porosity_L = calculator.porosity_L.data
-        permeability_L = calculator.permeability_L.data
-        S_and_Pc_lab = {}
+        form = request.form
+        interfacial_tension_L = float(form['interfacial_tension_L'])
+        porosity_L = float(form['porosity_L'])
+        permeability_L = float(form['permeability_L'])
 
         # Get the capillary pressure in the lab and saturation values
         i = 1
         while True:
-            Pc_lab_name = f'capillary_pressure_L_{i}'
             S_name = f'saturation_{i}'
-
-            if Pc_lab_name in request.form and S_name in request.form:
-                Pc_lab = float(request.form[Pc_lab_name])
+            Pc_lab_name = f'capillary_pressure_L_{i}'
+            if S_name in request.form and Pc_lab_name in request.form:
                 S = float(request.form[S_name])
-                S_and_Pc_lab[S] = Pc_lab
+                saturations.append(S)
+                Pc_lab = float(request.form[Pc_lab_name])
+                capillary_pressures_L.append(Pc_lab)
                 i += 1
             else:
                 break
-        # TO DO: allow same saturation values but
-        # different capillary pressures in the lab
-        S_and_Pc_lab = dict(sorted(S_and_Pc_lab.items()))
-        saturations = list(S_and_Pc_lab.keys())
-        capillary_pressures_L = list(S_and_Pc_lab.values())
 
-        interfacial_tension_F = calculator.interfacial_tension_F.data
-        porosity_F = calculator.porosity_F.data
-        permeability_F = calculator.permeability_F.data
+        interfacial_tension_F = float(form['interfacial_tension_F'])
+        porosity_F = float(form['porosity_F'])
+        permeability_F = float(form['permeability_F'])
 
         # Calculate the proportional constant A (Pc_field = A * Pc_lab)
         interfacial_tension_ratio = \
@@ -233,7 +159,7 @@ def leverett():
 
 @app.route('/optimal-flotation', methods=['GET', 'POST'])
 def optimal_flotation():
-    calculator = OptimalFlotation()
+    calculator = BareCalculator()
     recoveries, final_conc_grades, profits = [], [], []
     if calculator.validate_on_submit():
         form = request.form
@@ -339,7 +265,7 @@ def optimal_flotation():
 
 @app.route('/partition-curve', methods=['GET', 'POST'])
 def partition_curve():
-    calculator = PartitionCurve()
+    calculator = BareCalculator()
     representative_sizes, partition_numbers = [], []
     if calculator.validate_on_submit():
         form = request.form

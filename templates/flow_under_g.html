@@ -21,25 +21,25 @@
             
             <div class="form-group">
                 <label for="permeability" class="form-label">Permeability (\(\text{D}\))</label>
-                {{ form.permeability(class="form-control") }}
+                <input type="number" step="any" min="0" name="permeability" id="permeability" class="form-control" required>
             </div>
 
             <div class="form-group">
                 <label for="density1" class="form-label">Density of the fluid of interest (\(\text{kg}/\text{m}^3\))</label>
-                {{ form.density1(class="form-control") }}
+                <input type="number" step="any" min="0" name="density1" id="density1" class="form-control" required>
             </div>
 
             <div class="form-group">
                 <label for="density2" class="form-label">Density of the other fluid (leave it 0 for 1-phase flow) (\(\text{kg}/\text{m}^3\))</label>
-                {{ form.density2(class="form-control") }}
+                <input type="number" step="any" min="0" value="0" name="density2" id="density2" class="form-control" required>
             </div>
 
             <div class="form-group">
                 <label for="viscosity1" class="form-label">Viscosity of the fluid of interest (\(\text{Pa.s}\))</label>
-                {{ form.viscosity1(class="form-control") }}
+                <input type="number" step="any" min="0" name="viscosity1" id="viscosity1" class="form-control" required>
             </div>
 
-            <button type="submit" class="btn btn-success submit-button">Calculate</button>
+            <button type="submit" class="btn btn-success submit-button" id="calculate-button">Calculate</button>
         </form>
     </div>
 
@@ -47,10 +47,10 @@
 
     {% if darcy_velocity %}
         <div class="result-container my-20">
-            {% if form.density2.data == 0 %}
+            {% if density2 == 0 %}
                 <h3>The fluid of interest flows downwards with a hydraulic conductivity of {{ '%.1e'|format(darcy_velocity) }} \(\text{m/s}\)</h3>
             {% else %}
-                {% if form.density1.data >= form.density2.data %}
+                {% if density1 >= density2 %}
                     <h3>The fluid of interest flows downwards with a Darcy velocity of {{ '%.1e'|format(darcy_velocity) }} \(\text{m/s}\)</h3>
                 {% else %}
                     <h3>The fluid of interest flows upwards with a Darcy velocity of {{ '%.1e'|format(darcy_velocity) }} \(\text{m/s}\)</h3>
@@ -155,5 +155,23 @@
     <hr />
 
 </div>
+
+<script>
+    document.addEventListener("DOMContentLoaded", function() {
+        // Once Calculate button is clicked
+        document.getElementById('calculate-button').addEventListener('click', function(event) {
+            var permeability = parseFloat(document.getElementById('permeability').value);
+            var density1 = parseFloat(document.getElementById('density1').value);
+            var density2 = parseFloat(document.getElementById('density2').value);
+            var viscosity1 = parseFloat(document.getElementById('viscosity1').value);
+
+            // Check if all inputs are not zero
+            if (permeability === 0 || density1 === 0 || viscosity1 === 0) {
+                alert('Please input non-zero values if not stated otherwise.');
+                event.preventDefault(); // Prevent form submission
+            }
+        });
+    });
+</script>
 
 {% endblock %}
